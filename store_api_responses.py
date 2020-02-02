@@ -74,7 +74,7 @@ for nf in all_fixtures:
                             '$set': nf}, upsert=True)
     
     i = i + 1
-    printProgressBar(i, total_fixtures, '> Progress: ', '', 3, 30)
+    printProgressBar(i, total_fixtures, '> Progress: ', '', 3, 30, '#', '\r', '/n')
 
 print('All fixtures updated.')
 
