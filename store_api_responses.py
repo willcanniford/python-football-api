@@ -1,57 +1,16 @@
 # Import packages
-import json
-import os
 import pandas as pd
-import pymongo
-import requests
 from classes.progress_bar import printProgressBar
+import classes.helpers as hlp
 
-# Get the database details from the conda environment
-mongodb_password = os.environ.get("mongodb_password")
-mongodb_user = os.environ.get("mongodb_user")
-
-# Access the database client and define database
-client = pymongo.MongoClient(
-    "mongodb+srv://" +
-    mongodb_user +
-    ":" +
-    mongodb_password +
-    "@basiccluster-6s0er.mongodb.net/test?retryWrites=true&w=majority")
-db = client.football
-
-# Get the API details from the conda environment
-headers = {
-    'x-rapidapi-host': os.environ.get("api_host"),
-    'x-rapidapi-key': os.environ.get("api_key")
-}
-
-# Define a function that calls a given endpoint
-
-
-def api_call(url):
-    '''
-    Call the given url and load the resulting JSON object
-
-    Parameters
-    ----------
-    url: string
-        The API endpoint to call with a GET request
-    '''
-    response = requests.request("GET", url, headers=headers)
-
-    try:
-        response = json.loads(response.text)
-    except BaseException:
-        print(f"Response {response.text} isn't valid JSON format.")
-
-    return(response)
-
+# Connect to the database 
+db = hlp.connect_to_mongodb('football')
 
 # Call Premier League Endpoint and store all fixtures
 base_url = 'https://api-football-v1.p.rapidapi.com/v2/'
 premier_league_id = '524'
 fixtures_url = base_url + 'fixtures/league/' + premier_league_id
-all_fixtures_response = api_call(fixtures_url)
+all_fixtures_response = hlp.api_call(fixtures_url)
 
 # Check the response is in the format we need
 try:
