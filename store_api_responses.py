@@ -44,6 +44,17 @@ fixtures_without_stats = db.fixtures.find(
 print(f"Fixtures missing statistics: {len(list(fixtures_without_stats))}")
 
 
+fixtures_without_stats = db.fixtures.find(
+    {'events': {'$exists': False}, 'statusShort': 'FT'})
+
+print(f"Fixtures missing events: {len(list(fixtures_without_stats))}")
+
+
+fixtures_without_stats = db.fixtures.find(
+    {'lineups': {'$exists': False}, 'statusShort': 'FT'})
+
+print(f"Fixtures missing lineups: {len(list(fixtures_without_stats))}")
+
 # while request_counter < api_max_requests: # Won't increment properly
 #    fixture = fixtures_without_stats['api']['statistics'][i]
 #    statistics_url = "https://api-football-v1.p.rapidapi.com/v2/statistics/fixture/%d"
