@@ -3,20 +3,25 @@ import pandas as pd
 from classes.progress_bar import printProgressBar
 import classes.helpers as hlp
 import argparse
-
+import time
 
 # Handle arguments
 a = argparse.ArgumentParser(description='store_api_responses.py')
 a.add_argument('--results', dest="results",
                action="store", type=bool, default=False)
+a.add_argument("--statistics", dest="statistics",
+               action="store", type=int, default=10)
+
 arguments = a.parse_args()
 check_results = arguments.results
+n_statistics_to_update = arguments.statistics
+
 
 # Connect to the database
 db = hlp.connect_to_mongodb('football')
 current_fixtures = db.fixtures.find()
 
-if check_results:
+if check_results == True:
     # Call Premier League Endpoint and store all fixtures
     base_url = 'https://api-football-v1.p.rapidapi.com/v2/'
     premier_league_id = '524'
@@ -48,13 +53,49 @@ if check_results:
     print('All fixtures updated.')
 
 
-# get("https://api-football-v1.p.rapidapi.com/v2/statistics/fixture/{fixture_id}");
-
 fixtures_without_stats = db.fixtures.find(
     {'statistics': {'$exists': False}, 'statusShort': 'FT'})
 
+n_fixtures_without_stats = db.fixtures.count_documents(
+    {'statistics': {'$exists': False}, 'statusShort': 'FT'})
+
+if n_statistics_to_update > 0 and n_fixtures_without_stats > 0:
+    statistics_url = "https://api-football-v1.p.rapidapi.com/v2/statistics/fixture/%d"
+
+    # Loop through n times - min
+    n = min(n_statistics_to_update, n_fixtures_without_stats)
+    for i in range(n):
+        try:
+            fixture_to_update = fixtures_without_stats[i]
+        except:
+            raise("No fixture to update.")
+
+        # Get statistics
+        fixture_stat_response = hlp.api_call(
+            statistics_url % fixture_to_update['fixture_id'])
+        time.sleep(.250)
+
+        try:
+            fixture_stats = fixture_stat_response['api']['statistics']
+        except KeyError:
+            print(
+                f"Cannot find statistics in response: {fixture_stat_response}")
+            break
+
+        # Update fixture
+        db.fixtures.update_one({'fixture_id': fixture_to_update['fixture_id']},
+                               {'$set': {'statistics': fixture_stats}},
+                               upsert=True)
+
+        printProgressBar(i, n, 'Statistic updates: ',
+                         '', 3, 30, '#', '\r', '/n')
+
+
+n_fixtures_without_stats = db.fixtures.count_documents(
+    {'statistics': {'$exists': False}, 'statusShort': 'FT'})
+
 print(
-    f"Finished fixtures missing statistics: {len(list(fixtures_without_stats))}")
+    f"Finished fixtures missing statistics: {n_fixtures_without_stats}")
 
 
 fixtures_without_stats = db.fixtures.find(
