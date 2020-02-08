@@ -2,58 +2,72 @@
 import pandas as pd
 from classes.progress_bar import printProgressBar
 import classes.helpers as hlp
+import argparse
 
-# Connect to the database 
+
+# Handle arguments
+a = argparse.ArgumentParser(description='store_api_responses.py')
+a.add_argument('--results', dest="results",
+               action="store", type=bool, default=False)
+arguments = a.parse_args()
+check_results = arguments.results
+
+# Connect to the database
 db = hlp.connect_to_mongodb('football')
-
-# Call Premier League Endpoint and store all fixtures
-base_url = 'https://api-football-v1.p.rapidapi.com/v2/'
-premier_league_id = '524'
-fixtures_url = base_url + 'fixtures/league/' + premier_league_id
-all_fixtures_response = hlp.api_call(fixtures_url)
-
-# Check the response is in the format we need
-try:
-    all_fixtures = all_fixtures_response['api']['fixtures']
-except BaseException:
-    print(f"Fixture response not in expected format: {all_fixtures_response}")
-
-# Get current fixtures stored in MongoDB
 current_fixtures = db.fixtures.find()
 
-# Progress bar counter
-total_fixtures = len(all_fixtures)
-i = 0
+if check_results:
+    # Call Premier League Endpoint and store all fixtures
+    base_url = 'https://api-football-v1.p.rapidapi.com/v2/'
+    premier_league_id = '524'
+    fixtures_url = base_url + 'fixtures/league/' + premier_league_id
+    all_fixtures_response = hlp.api_call(fixtures_url)
 
-# Loop through the fixtures and update all the records with the base
-# information
-for nf in all_fixtures:
-    # Join on fixture_id and update/insert all data
-    db.fixtures.update_many({'fixture_id': nf['fixture_id']}, {
-                            '$set': nf}, upsert=True)
-    
-    i = i + 1
-    printProgressBar(i, total_fixtures, '> Progress: ', '', 3, 30, '#', '\r', '/n')
+    # Check the response is in the format we need
+    try:
+        all_fixtures = all_fixtures_response['api']['fixtures']
+    except BaseException:
+        print(
+            f"Fixture response not in expected format: {all_fixtures_response}")
 
-print('All fixtures updated.')
+    # Progress bar counter
+    total_fixtures = len(all_fixtures)
+    i = 0
 
+    # Loop through the fixtures and update all the records with the base
+    # information
+    for nf in all_fixtures:
+        # Join on fixture_id and update/insert all data
+        db.fixtures.update_many({'fixture_id': nf['fixture_id']}, {
+                                '$set': nf}, upsert=True)
+
+        i = i + 1
+        printProgressBar(i, total_fixtures, '> Progress: ',
+                         '', 3, 30, '#', '\r', '/n')
+
+    print('All fixtures updated.')
+
+
+# get("https://api-football-v1.p.rapidapi.com/v2/statistics/fixture/{fixture_id}");
 
 fixtures_without_stats = db.fixtures.find(
     {'statistics': {'$exists': False}, 'statusShort': 'FT'})
 
-print(f"Fixtures missing statistics: {len(list(fixtures_without_stats))}")
+print(
+    f"Finished fixtures missing statistics: {len(list(fixtures_without_stats))}")
 
 
 fixtures_without_stats = db.fixtures.find(
     {'events': {'$exists': False}, 'statusShort': 'FT'})
 
-print(f"Fixtures missing events: {len(list(fixtures_without_stats))}")
+print(f"Finished fixtures missing events: {len(list(fixtures_without_stats))}")
 
 
 fixtures_without_stats = db.fixtures.find(
     {'lineups': {'$exists': False}, 'statusShort': 'FT'})
 
-print(f"Fixtures missing lineups: {len(list(fixtures_without_stats))}")
+print(
+    f"Finished fixtures missing lineups: {len(list(fixtures_without_stats))}")
 
 # while request_counter < api_max_requests: # Won't increment properly
 #    fixture = fixtures_without_stats['api']['statistics'][i]
